@@ -77,6 +77,7 @@ ColumnLayout {
     }
 
     DayOfWeekRow {
+        id: weekday
         locale: gridMonth.locale
         Layout.fillWidth: true
         delegate: Text {
@@ -106,6 +107,13 @@ ColumnLayout {
         year: spinYear.value
         locale: Qt.locale("en_US")
         delegate: MCalendarDayDelegate {
+            /* width and height are specified for the idiotic reason
+             * that the layout can't manage it on its own.
+             *
+             * Hopefully after 6.4.0 this won't be necessary.
+             */
+            width: weekday.contentItem.visibleChildren[0].width
+            height: weekday.contentItem.visibleChildren[0].height
             Layout.fillHeight: true
             Layout.fillWidth: true
             monthGrid: calendar

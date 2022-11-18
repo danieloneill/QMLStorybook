@@ -3,9 +3,11 @@ import QtQuick
 import QtQuick.Controls.Material
 
 Item {
-    FontLoader { id: font_ts; source: "../../fonts/TechnaSans-Regular.otf" }
-    FontLoader { id: font_mr; source: "../../fonts/Mollen-Regular.otf" }
-    FontLoader { id: font_geb; source: "../../fonts/Gogh-ExtraBold.otf" }
+    FontLoader { id: font_ts; source: "../fonts/TechnaSans-Regular.otf" }
+    FontLoader { id: font_mr; source: "../fonts/Mollen-Regular.otf" }
+    FontLoader { id: font_geb; source: "../fonts/Gogh-ExtraBold.otf" }
+
+    property string currencySymbol: '$'
 
     property string buttonFontFamily: font_ts ? font_ts.font.family : 'sans-serif'
     property int buttonFontSize: 12
@@ -26,6 +28,7 @@ Item {
     property color textFieldBGSelectedColour: '#8a7a9a'
     property color textFieldBGModified: '#22ff0000'
 
+    property color textLabelColour: '#ff442454'
     property string textFontFamily: font_mr ? font_mr.font.family : 'sans-serif'
     property int textFontSize: 12
 

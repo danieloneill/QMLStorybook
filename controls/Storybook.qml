@@ -8,8 +8,8 @@ Item {
     id: storybook
 
     // This is relative to "storybook.qml" not "Storybook.qml" (this).
-    property string sourcePath: ':/controls/'
-
+    property variant currentSource
+    property string sourcePath: './controls/'
     property variant sources: [
         { 'name': 'MButton',
           'source': 'MButton.qml',
@@ -43,7 +43,25 @@ Item {
                 obj.checkedChanged.connect( function() { storybook.log(`Checkbox checked: ${obj.checked}`); } );
             },
             'notes': "**MCheckBox** inherits **MButton** and reuses the signals and properties therein."
-        }
+        },
+        { 'name':'MClippedLabel',
+          'source':'MClippedLabel.qml',
+          'instances': [
+            { 'properties':{ 'text':'Test label that should clip, and scroll right to left, then back again.', 'width':180 } }
+          ],
+        },
+        { 'name':'MCurrencyField',
+            'source':'MCurrencyField.qml',
+            'instances': [
+                { 'properties':{ 'value':1.23 } }
+            ]
+        },
+        { 'name':'MFrame',
+          'source':'MFrame.qml',
+          'instances': [
+                { 'properties':{'width':330, 'height':250} }
+          ]
+        },
     ]
 
     function controlLoaded(source, obj, instance)
@@ -62,6 +80,36 @@ Item {
             notesEdit.text += instance['notes'];
 
         updateSource(source);
+
+        let w = WASM.watcher();
+        w.watch(storybook.sourcePath + source['source']);
+        w.fileChanged.connect( function(path) {
+            storybook.log(qsTr("File modified. Reloading source..."));
+            reloadCurrentSource();
+            delete w;
+        } );
+    }
+
+    Timer {
+        id: reloadTimer
+        property variant callback
+        repeat: false
+        onTriggered: function() { callback(); }
+        function setTimeout(interval, callback)
+        {
+            reloadTimer.interval = interval;
+            reloadTimer.callback = callback;
+            reloadTimer.start();
+        }
+    }
+
+    function reloadCurrentSource()
+    {
+        reloadTimer.setTimeout(500, function() {
+            storybook.clearCanvas();
+            WASM.clearComponentCache();
+            storybook.loadSource(storybook.currentSource);
+        } );
     }
 
     function updateSource(source)
@@ -90,6 +138,8 @@ Item {
 
     function loadSource(source)
     {
+        storybook.currentSource = source;
+
         const controlName = source['name'];
         const instances = source['instances'];
         const bindSignals = source['bindSignals'];
@@ -137,6 +187,7 @@ Item {
                         width: itemList.width
                         text: modelData.name
                         onTriggered: {
+                            itemList.currentIndex = index;
                             storybook.clearCanvas();
                             storybook.loadSource(modelData);
                         }
@@ -175,17 +226,18 @@ Item {
                             textFormat: TextEdit.MarkdownText
                             readOnly: true
                             onTextChanged: {
-                                notesPane.visible = (text.length > 0);
+                                if( text.length > 0 )
+                                    notesPane.visible = true;
                             }
                         }
                     }
 
-                    ToolButton {
+                    Button {
                         anchors {
                             top: parent.top
                             right: parent.right
                         }
-                        text: '‹'
+                        text: '❌'
                         width: height
                         onClicked: notesPane.visible = false;
                     }
@@ -203,6 +255,7 @@ Item {
 
                     ScrollView {
                         anchors.fill: parent
+			anchors.margins: 10
                         //flickableDirection: Flickable.HorizontalAndVerticalFlick
                         contentWidth: controlContainer.width + 20
                         contentHeight: controlContainer.height + 20

@@ -11,5 +11,6 @@ Window {
     Storybook {
         anchors.fill: parent
         anchors.margins: 10
+        sourcePath: ':/controls/'
     }
 }

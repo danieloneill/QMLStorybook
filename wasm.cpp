@@ -13,6 +13,7 @@
 #include <QJSEngine>
 #include <QMimeData>
 #include <QPair>
+#include <QQmlEngine>
 #ifndef QT_NO_SSL
 # include <QSslError>
 #endif
@@ -97,8 +98,9 @@ EM_JS(void, __js_log, (const char *formatstr, size_t formatlen, const char *args
 # include <QDir>
 #endif
 
-WASM::WASM(QObject *parent)
+WASM::WASM(QQmlEngine *parent)
     : QObject{parent},
+      m_engine{parent},
       m_clipboard{QApplication::clipboard()},
       m_translator{nullptr}
 {
@@ -460,6 +462,16 @@ QVariant WASM::readFile(const QString &path)
     QByteArray buf = f.readAll();
     f.close();
     return buf;
+}
+
+void WASM::clearComponentCache()
+{
+    if( !m_engine )
+    {
+        qCritical() << "Couldn't get a QQmlEngine handle.";
+        return;
+    }
+    m_engine->clearComponentCache();
 }
 
 Watcher *WASM::watcher()

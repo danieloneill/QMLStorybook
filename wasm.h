@@ -30,10 +30,12 @@ signals:
 
 };
 
+class QQmlEngine;
 class WASM : public QObject
 {
     Q_OBJECT
 
+    QQmlEngine              *m_engine;
     QNetworkAccessManager   m_qnam;
     QClipboard              *m_clipboard;
     QTranslator             *m_translator;
@@ -47,7 +49,7 @@ class WASM : public QObject
     Q_PROPERTY(QString version READ version CONSTANT)
 
 public:
-    explicit WASM(QObject *parent=nullptr);
+    explicit WASM(QQmlEngine *parent);
     ~WASM();
 
     Q_INVOKABLE QVariantMap queryItems();
@@ -70,6 +72,7 @@ public:
     Q_INVOKABLE void remoteTranslation(const QString &langcode);
 
     Q_INVOKABLE Watcher *watcher();
+    Q_INVOKABLE void clearComponentCache();
 
     Q_INVOKABLE void handleUpload(QJSValue callback);
     Q_INVOKABLE bool get(const QString &url, QJSValue callback);
