@@ -87,7 +87,6 @@ Item {
         reloadTimer.setTimeout(500, function() {
             storybook.clearCanvas();
             WASM.clearComponentCache();
-
             console.log(qsTr('Reloading...'));
             storybook.loadSource(storybook.currentSource);
         } );

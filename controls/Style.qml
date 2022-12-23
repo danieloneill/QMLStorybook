@@ -7,6 +7,8 @@ Item {
     FontLoader { id: font_mr; source: "../fonts/Mollen-Regular.otf" }
     FontLoader { id: font_geb; source: "../fonts/Gogh-ExtraBold.otf" }
 
+    property string currencySymbol: '$'
+
     property string buttonFontFamily: font_ts && font_ts.font ? font_ts.font.family : 'sans-serif'
     property int buttonFontSize: 12
     property color buttonBGColour: '#eaeaea'
@@ -27,6 +29,7 @@ Item {
     property color textFieldBGModified: '#22ff0000'
 
     property string textFontFamily: font_mr && font_mr.font ? font_mr.font.family : 'sans-serif'
+    property color textLabelColour: '#ff442454'
     property int textFontSize: 12
 
     property color frameBorderColour: buttonBorderColour

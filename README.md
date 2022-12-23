@@ -47,3 +47,17 @@ Although it's painfully close to pure QML, I use a QFile method from the C++ sid
 [https://oneill.app/storybook/](https://oneill.app/storybook/)
 
 On Webassembly the text and lines look pretty jaggy. I suspect it's a Qt 6.4 thing. (On Desktop it doesn't look gross like that.)
+
+
+## Usage
+
+Just compile it somewhere using standard Qt Qmake techniques, then point it at your storybook.
+
+You can just edit Storybook.qml and add your content or replace it fairly easily by loading it from a main QML file with an approriate "sources" property declared in the expected format.
+
+Once built you can launch it as-is or pass a parameter to a QML file to load. (It doesn't have to spawn a Storybook instance, but if you aren't gonna then why even bother?)
+
+```
+$ ./QMLStorybook ~/storybook/main.qml
+```
+

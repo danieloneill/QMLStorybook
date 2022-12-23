@@ -79,6 +79,7 @@ ColumnLayout {
     }
 
     DayOfWeekRow {
+        id: weekday
         locale: gridMonth.locale
         Layout.fillWidth: true
         delegate: Text {
@@ -110,8 +111,6 @@ ColumnLayout {
         year: spinYear.value
         locale: Qt.locale("en_US")
         delegate: MCalendarDayDelegate {
-            //Layout.fillHeight: true
-            //Layout.fillWidth: true
             monthGrid: calendar
             onClicked: {
                 calendar.day = model.day;
