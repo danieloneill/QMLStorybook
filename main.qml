@@ -14,7 +14,10 @@ Window {
         anchors.fill: parent
         anchors.margins: 10
 
-        property string rootPath: '/home/doneill/code/QMLStorybook'
+        /**
+         * Point this to your project root, or QMLStorybook's root (where main.qml is)
+         */
+        property string rootPath: '..'
 
         otherAssets: [
             { 'callback':function(path){}, 'path':rootPath+'/main.qml' },

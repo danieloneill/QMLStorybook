@@ -1,6 +1,10 @@
+ChatMessage 1.0 ChatMessage.qml
 MButton 1.0 MButton.qml
 MCalendar 1.0 MCalendar.qml
 MCalendarDayDelegate 1.0 MCalendarDayDelegate.qml
 MCheckBox 1.0 MCheckBox.qml
+MClippedLabel 1.0 MClippedLabel.qml
+MCurrencyField 1.0 MCurrencyField.qml
+MFrame 1.0 MFrame.qml
 Storybook 1.0 Storybook.qml
 singleton Style 1.0 Style.qml
