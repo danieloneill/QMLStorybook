@@ -11,7 +11,9 @@ It's possible to instantiate a component several times with different properties
 
 Any .qml file beginning with a capital letter which can be generally instantiated can be used.
 
-*[controls/Storybook.qml](/controls/Storybook.qml)* contains some example control files and entries.
+*[controls/](/controls/)* contains some example component files and entries.
+
+*[main.qml](main.qml)* contains some example entries.
 
 Entries must define:
  * A **name** (to identify it in the list)
@@ -34,15 +36,13 @@ and optionally:
         }
 ```
 
-*MCheckBox* doesn't show the text property on its face. This is a bug, and most of the reason I made this ... Storybook-like ... app ... whatever it is.
-
 *MCalendar* sometimes doesn't size its children (the days) based on the layout. This is also a bug, and another cool reason to have this.
 
 *MButton* works properly though, I'm pretty sure, but as you can see in the Storybook.qml entry for it, I don't yet test out all the property options.
 
 ## Demo?
 
-Although it's painfully close to pure QML, I use a QFile method from the C++ side to load file source into the **Source** tab. This makes loading it in [Canonic](https://www.canonic.com/) not possible, so for as long as I keep paying the server tab you can try it here:
+Although it's painfully close to pure QML, I use a a couple methods from the C++ side to load file source into the **Source** tab, and to watch files for changes. This makes loading it in [Canonic](https://www.canonic.com/) not possible, so for as long as I keep paying the server tab you can try it here:
 
 [https://oneill.app/storybook/](https://oneill.app/storybook/)
 
@@ -51,13 +51,19 @@ On Webassembly the text and lines look pretty jaggy. I suspect it's a Qt 6.4 thi
 
 ## Usage
 
-Just compile it somewhere using standard Qt Qmake techniques, then point it at your storybook.
-
-You can just edit Storybook.qml and add your content or replace it fairly easily by loading it from a main QML file with an approriate "sources" property declared in the expected format.
-
-Once built you can launch it as-is or pass a parameter to a QML file to load. (It doesn't have to spawn a Storybook instance, but if you aren't gonna then why even bother?)
+Just compile it somewhere using standard Qt Qmake techniques, then point it at your storybook:
 
 ```
-$ ./QMLStorybook ~/storybook/main.qml
+[l33th4x@pwnbox QMLStorybook]$ mkdir build
+[l33th4x@pwnbox QMLStorybook]$ cd build
+[l33th4x@pwnbox build]$ qmake ..
+Info: creating stash file /home/l33th4x/code/QMLStorybook/build/.qmake.stash
+[l33th4x@pwnbox build]$ make
+clang++ -c -pipe -bang -kaboom -shizang -c -o awesomeness.o awesomeness.cpp -Isolaris -Isolaris/beos
+....
+....
+[l33th4x@pwnbox build]$ ./Storybook ../main.qml
 ```
+
+Copy or modify *main.qml* to reflect your content, then launch Storybook pointing at it.
 
