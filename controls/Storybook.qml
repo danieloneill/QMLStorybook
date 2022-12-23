@@ -1,50 +1,57 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Controls.Material
-import QtQuick.Layouts
-import QtQml
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Controls.Material 2.15
+import QtQuick.Layouts 1.15
 
 Item {
     id: storybook
 
     // This is relative to "storybook.qml" not "Storybook.qml" (this).
-    property string sourcePath: ':/controls/'
+    property string sourcePath: '.'
+    property variant otherAssets: []
 
-    property variant sources: [
-        { 'name': 'MButton',
-          'source': 'MButton.qml',
-          'instances': [
-                { 'properties': {'text':'Sample text'} },
-                { 'properties': {'text':'Padded Button', 'leftPadding':20} },
-                { 'properties': {'image.source': 'https://cdn.iconscout.com/icon/free/png-256/testing-2-456361.png'} },
-                { 'properties': {'text':'Checkable', 'checkable':true}, 'bindSignals': function(obj) {
-                    obj.checkedChanged.connect( function() { storybook.log(`Button checked: ${obj.checked}`); } );
-                } }
-          ],
-          'bindSignals': function(obj) {
-              obj.clicked.connect( function() { storybook.log("Button clicked."); } );
-          }
-        },
-        { 'name':'MCalendar',
-          'source':'MCalendar.qml',
-          'instances': [
-                { 'properties':{'height':320, 'width':240} }
-          ],
-          'bindSignals': function(obj) {
-              obj.timestampChanged.connect( function() { storybook.log(`Calendar is now set to ${obj.timestamp}`); } );
-          }
-        },
-        { 'name':'MCheckBox',
-            'source':'MCheckBox.qml',
-            'instances': [
-                { 'properties':{'text':'MCheckBox'} }
-            ],
-            'bindSignals': function(obj) {
-                obj.checkedChanged.connect( function() { storybook.log(`Checkbox checked: ${obj.checked}`); } );
-            },
-            'notes': "**MCheckBox** inherits **MButton** and reuses the signals and properties therein."
+    // The model of your controls.
+    property variant sources: []
+
+    property alias controlList: itemList
+
+    /**************************************
+     * The rest is for internal operation *
+     **************************************/
+    property variant currentSource
+
+    property variant watcher: WASM.watcher()
+
+    //onSourcePathChanged: updateWatchers();
+    onOtherAssetsChanged: updateWatchers();
+
+    Connections {
+        target: watcher
+        function onFileChanged(path) {
+            console.log(`${path} changed, reloading...`);
+            storybook.reloadCurrentSource();
+            watcher.addPath(path);
         }
-    ]
+        function onDirectoryChanged(path) {
+            console.log(`${path} changed, reloading...`);
+            storybook.reloadCurrentSource();
+            watcher.addPath(path);
+        }
+    }
+
+    function updateWatchers() {
+        for( let a=0; a < storybook.otherAssets.length; a++ )
+        {
+            const p = storybook.otherAssets[a];
+            addWatcher(p['path']);
+        }
+    }
+
+    function addWatcher(path)
+    {
+        console.log(`Adding path: ${path}`);
+        watcher.addPath(path);
+    }
 
     function controlLoaded(source, obj, instance)
     {
@@ -60,8 +67,30 @@ Item {
 
         if( instance['notes'] )
             notesEdit.text += instance['notes'];
+    }
 
-        updateSource(source);
+    Timer {
+        id: reloadTimer
+        property var callback
+        repeat: false
+        onTriggered: function() { callback(); }
+        function setTimeout(interval, callback)
+        {
+            reloadTimer.interval = interval;
+            reloadTimer.callback = callback;
+            reloadTimer.start();
+        }
+    }
+
+    function reloadCurrentSource()
+    {
+        reloadTimer.setTimeout(500, function() {
+            storybook.clearCanvas();
+            WASM.clearComponentCache();
+
+            console.log(qsTr('Reloading...'));
+            storybook.loadSource(storybook.currentSource);
+        } );
     }
 
     function updateSource(source)
@@ -90,17 +119,25 @@ Item {
 
     function loadSource(source)
     {
+        storybook.currentSource = source;
+
         const controlName = source['name'];
         const instances = source['instances'];
         const bindSignals = source['bindSignals'];
 
         instances.forEach( function(instance)
         {
-            log(`Creating instance of ${controlName} with ${JSON.stringify(instance)}`);
-            const component = Qt.createComponent(source['source']);
+            const path = storybook.sourcePath + source['source'];
+
+            //log(`Creating instance of ${controlName} with ${JSON.stringify(instance)} (${path})`);
+            const component = Qt.createComponent(path);
 
             const incubator = component.incubateObject(controlContainer, instance['properties']);
-            if (incubator.status !== Component.Ready)
+            if( !incubator )
+            {
+                console.log(qsTr('Failed to load component at "%1". Verify the path is correct, and update "sourcePath" in Storybook.qml as needed.').arg(path));
+            }
+            else if( incubator.status !== Component.Ready )
             {
                 incubator.onStatusChanged = function(status)
                 {
@@ -108,6 +145,8 @@ Item {
                     {
                         let obj = incubator.object;
                         controlLoaded(source, obj, instance);
+                    } else if(status === Component.Error) {
+                        console.log(`Error: ${incubator.errorString}`);
                     }
                 };
             } else {
@@ -115,6 +154,9 @@ Item {
                 controlLoaded(source, obj, instance);
             }
         });
+
+        updateSource(source);
+        addWatcher(storybook.sourcePath + source['source']);
     }
 
     SplitView {
@@ -137,9 +179,14 @@ Item {
                         width: itemList.width
                         text: modelData.name
                         onTriggered: {
-                            storybook.clearCanvas();
-                            storybook.loadSource(modelData);
+                            itemList.currentIndex = index;
+                            itemList.loadEntry(modelData);
                         }
+                    }
+
+                    function loadEntry(entry) {
+                        storybook.clearCanvas();
+                        storybook.loadSource(entry);
                     }
                 }
             }
@@ -175,17 +222,20 @@ Item {
                             textFormat: TextEdit.MarkdownText
                             readOnly: true
                             onTextChanged: {
-                                notesPane.visible = (text.length > 0);
+                                if( text.length > 0 )
+                                    notesPane.visible = true;
+                                else
+                                    notesPane.visible = false;
                             }
                         }
                     }
 
-                    ToolButton {
+                    Button {
                         anchors {
                             top: parent.top
                             right: parent.right
                         }
-                        text: '‹'
+                        text: '❌'
                         width: height
                         onClicked: notesPane.visible = false;
                     }
@@ -203,14 +253,13 @@ Item {
 
                     ScrollView {
                         anchors.fill: parent
-                        //flickableDirection: Flickable.HorizontalAndVerticalFlick
+                        anchors.margins: 10
                         contentWidth: controlContainer.width + 20
                         contentHeight: controlContainer.height + 20
 
                         Column {
                             id: controlContainer
                             spacing: 10
-                            //anchors.centerIn: parent
                             width: childrenRect.width
                             height: childrenRect.height
                         }

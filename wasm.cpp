@@ -98,12 +98,19 @@ EM_JS(void, __js_log, (const char *formatstr, size_t formatlen, const char *args
 # include <QDir>
 #endif
 
+static bool wasm_initialised = false;
+
 WASM::WASM(QQmlEngine *parent)
     : QObject{parent},
       m_engine{parent},
-      m_clipboard{QApplication::clipboard()},
-      m_translator{nullptr}
+      m_clipboard{QApplication::clipboard()}
 {
+    if( !wasm_initialised )
+    {
+        qmlRegisterUncreatableType<Watcher>("org.canapos.Watcher", 1, 0, "Watcher", "Watcher must be instantiated via WASM.watcher");
+        wasm_initialised = true;
+    }
+
 #ifndef __EMSCRIPTEN__
     m_qsettings = new QSettings();
 #endif
@@ -191,63 +198,6 @@ void WASM::log(const QString &format, const QVariantList &args)
 }
 #endif
 
-bool WASM::setLanguage(const QString &langcode)
-{
-    // Already on that language?
-    if( m_translator && langcode == m_translator->language() )
-        return true;
-
-    // Switching to "no language"?
-    if( langcode.compare("C") == 0 )
-    {
-        if( !m_translator )
-            return true;
-
-        replaceTranslator(nullptr);
-        return true;
-    }
-
-    // en_CA => en, CA
-    QStringList langTerr = langcode.split('_');
-    if( langTerr.length() != 2 )
-        return false;
-
-    // en => QLocale::English, CA => QLocale::Canada
-    QLocale::Language lang = QLocale::codeToLanguage( langTerr.at(0) );
-    QLocale::Territory terr = QLocale::codeToTerritory( langTerr.at(1) );
-    QLocale locale(lang, terr);
-
-    QTranslator *translator = new QTranslator();
-    bool res = translator->load(locale, "mars_", "", ":/i18n/", ".qm");
-    if( !res )
-    {
-        qDebug() << "Load failed for language:" << langcode << ":" << langTerr.join('_');
-        translator->deleteLater();
-        return false;
-    }
-
-    replaceTranslator(translator);
-    return true;
-}
-
-void WASM::replaceTranslator(QTranslator *translator)
-{
-    if( m_translator )
-    {
-        qApp->removeTranslator(m_translator);
-        m_translator->deleteLater();
-    }
-
-    m_translator = translator;
-
-    if( m_translator )
-    {
-        if( qApp->installTranslator(m_translator) )
-            emit translated();
-    } else
-        emit translated();
-}
-
 QString WASM::version()
 {
     return QString::fromLatin1((const char *)BUILD_VERSION);
@@ -256,41 +206,6 @@ QString WASM::version()
 QString WASM::buildTime()
 {
     return QString::fromLatin1((const char *)BUILD_TIME);
-}
-
-void WASM::remoteTranslation(const QString &langcode)
-{
-    QNetworkRequest request;
-    QString rooturl = QUrl(location()).adjusted(QUrl::RemoveQuery | QUrl::RemoveFilename).toString();
-    QString qmloc = QString("%1/qm/mars_%2.qm").arg(rooturl).arg(langcode);
-    request.setUrl( QUrl(qmloc).adjusted(QUrl::NormalizePathSegments) );
-    qDebug() << "Requesting " << request.url().toString();
-    QNetworkReply *reply = m_qnam.get(request);
-
-    QObject::connect( reply, &QNetworkReply::errorOccurred, [reply]() {
-        qDebug() << "An error occured: " << reply->errorString();
-        reply->deleteLater();
-    });
-    QObject::connect( reply, &QNetworkReply::finished, [this, reply]() {
-        QByteArray data = reply->readAll();
-        reply->deleteLater();
-
-        if( data.length() == 0 )
-            return;
-
-        qDebug() << "Download complete: " << data.length() << "bytes";
-
-        QTranslator *translator = new QTranslator();
-        bool res = translator->load( (const uchar*)data.constData(), data.length() );
-        if( !res )
-        {
-            qDebug() << "Failed to load translation data.";
-            translator->deleteLater();
-            return;
-        }
-
-        replaceTranslator(translator);
-    });
 }
 
 QByteArray WASM::clipboardImage()
@@ -382,76 +297,9 @@ void WASM::saveCache()
 }
 #endif
 
-void WASM::handleUpload(QJSValue callback)
-{
-    QJSEngine *jse = qjsEngine(this);
-    if( !jse )
-    {
-        qCritical() << "Couldn't get a QJSEngine handle.";
-        return;
-    }
-    jse->collectGarbage();
-
-    auto fileContentReady = [jse, callback](const QString &fileName, const QByteArray &fileContent) {
-        if (fileName.isEmpty()) {
-            // No file was selected
-        } else {
-            QJSValueList args;
-            args << fileName;
-            args << jse->toScriptValue<QByteArray>(fileContent);
-            qDebug() << "File name: " + fileName;
-            callback.call(args);
-        }
-    };
-
-    QFileDialog::getOpenFileContent("Images (*.png *.gif *.jpg *.webp)", fileContentReady);
-}
-
-bool WASM::get(const QString &url, QJSValue callback)
-{
-    QJSEngine *jse = qjsEngine(this);
-    if( !jse )
-    {
-        qCritical() << "Couldn't get a QJSEngine handle.";
-        return false;
-    }
-    jse->collectGarbage();
-
-    QNetworkRequest request = QNetworkRequest(QUrl(url));
-    QNetworkReply *reply = m_qnam.get(request);
-    connect( reply, &QNetworkReply::finished, [jse, reply, callback]() {
-        // Convert headers to simpler map for JS
-        QVariantMap headers;
-        for( QNetworkReply::RawHeaderPair pair : reply->rawHeaderPairs() )
-        {
-            headers[ QString::fromUtf8(pair.first) ] = QString::fromUtf8(pair.second);
-        }
-
-        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        QByteArray data = reply->readAll();
-
-        QJSValueList args;
-        args << statusCode;
-        args << jse->toScriptValue<QVariant>(headers);
-        args << jse->toScriptValue<QByteArray>(data);
-        callback.call(args);
-
-        reply->deleteLater();
-    });
-#ifndef QT_NO_SSL
-    connect( reply, &QNetworkReply::sslErrors, [](const QList<QSslError> &errors) {
-        for( QSslError err : errors )
-            qDebug() << "SSL Error: " << err.errorString();
-
-        //reply->deleteLater();
-    });
-#endif
-    return reply->isRunning();
-}
-
 QVariant WASM::readFile(const QString &path)
 {
-    qDebug() << "WASM::readFile: " << path;
+    //qDebug() << "WASM::readFile: " << path;
     QFile f(path);
     if( !f.open(QIODevice::ReadOnly) )
     {
@@ -481,15 +329,7 @@ Watcher *WASM::watcher()
 }
 
 Watcher::Watcher(QObject *parent)
-    : QObject(parent)
+    : QFileSystemWatcher(parent)
 {
-    QObject::connect( &m_watcher, &QFileSystemWatcher::fileChanged, [this](const QString &path) {
-        this->fileChanged(path);
-        this->m_watcher.addPath(path);
-    });
 }
 
-bool Watcher::watch(const QString &path)
-{
-    return m_watcher.addPath(path);
-}

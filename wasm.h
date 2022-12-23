@@ -5,29 +5,25 @@
 #include <QFileSystemWatcher>
 #include <QJSValue>
 #include <QObject>
-#include <QLocale>
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QNetworkReply>
-#include <QTranslator>
+#include <QQuickItem>
 #include <QVariantMap>
 #ifndef __EMSCRIPTEN__
 # include <QSettings>
 #endif
 
-class Watcher : public QObject {
+class Watcher : public QFileSystemWatcher {
     Q_OBJECT
-
-    QFileSystemWatcher  m_watcher;
+    QML_ELEMENT
 
 public:
     Watcher(QObject *parent=nullptr);
 
-    Q_INVOKABLE bool watch(const QString &path);
-
-signals:
-    void fileChanged(const QString &path);
-
+    Q_INVOKABLE bool addPath(const QString &file) { return QFileSystemWatcher::addPath(file); }
+    Q_INVOKABLE QStringList addPaths(const QStringList &files) { return QFileSystemWatcher::addPaths(files); }
+    Q_INVOKABLE QStringList directories() { return QFileSystemWatcher::directories(); }
+    Q_INVOKABLE QStringList files() { return QFileSystemWatcher::files(); }
+    Q_INVOKABLE bool removePath(const QString &file) { return QFileSystemWatcher::removePath(file); }
+    Q_INVOKABLE QStringList removePaths(const QStringList &files) { return QFileSystemWatcher::removePaths(files); }
 };
 
 class QQmlEngine;
@@ -36,9 +32,7 @@ class WASM : public QObject
     Q_OBJECT
 
     QQmlEngine              *m_engine;
-    QNetworkAccessManager   m_qnam;
     QClipboard              *m_clipboard;
-    QTranslator             *m_translator;
     QVariantMap             m_settings;
 
 #ifndef __EMSCRIPTEN__
@@ -68,14 +62,8 @@ public:
     Q_INVOKABLE static void log(const QString &format, const QVariantList &args);
 #endif
 
-    Q_INVOKABLE bool setLanguage(const QString &langcode);
-    Q_INVOKABLE void remoteTranslation(const QString &langcode);
-
     Q_INVOKABLE Watcher *watcher();
     Q_INVOKABLE void clearComponentCache();
-
-    Q_INVOKABLE void handleUpload(QJSValue callback);
-    Q_INVOKABLE bool get(const QString &url, QJSValue callback);
 
     Q_INVOKABLE QVariant readFile(const QString &path);
 
@@ -91,13 +79,10 @@ private:
     bool loadCache();
     void saveCache();
 
-    void replaceTranslator(QTranslator *translator);
-
     QString buildTime();
     QString version();
-
-signals:
-    void translated();
 };
+
+Q_DECLARE_METATYPE(Watcher*)
 
 #endif // WASM_H

@@ -11,16 +11,19 @@ int main(int argc, char *argv[])
     app.setOrganizationDomain("com.canapos");
     app.setApplicationName("Storybook");
 
-    WASM *w = new WASM();
-
     QQmlApplicationEngine engine;
-    const QUrl url("qrc:/main.qml");
+
+    QUrl url("qrc:/main.qml");
+    if( argc > 1 )
+        url = QUrl::fromLocalFile( QString::fromLocal8Bit( argv[1] ) );
+
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
         if (!obj && url == objUrl)
             QCoreApplication::exit(-1);
     }, Qt::QueuedConnection);
 
+    WASM *w = new WASM(&engine);
     engine.rootContext()->setContextProperty("WASM", w);
 
     engine.load(url);

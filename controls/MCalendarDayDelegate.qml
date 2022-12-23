@@ -1,4 +1,4 @@
-import QtQuick
+import QtQuick 2.15
 
 Rectangle {
     required property var model
@@ -6,10 +6,11 @@ Rectangle {
     property alias label: dayLabel
     signal clicked()
     color: 'transparent'
-    border.width: 1
+    border.width: model.month === monthGrid.month ? 1 : 0
 
-    implicitWidth: dayLabel.implicitWidth
-    implicitHeight: dayLabel.implicitHeight + 4
+    width: gridMonth.width * 0.12
+    height: width * 0.7
+
     property variant timestamp: new Date(model.year, model.month, model.day, 12, 0, 0, 0)
     Text {
         id: dayLabel

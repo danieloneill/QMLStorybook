@@ -1,7 +1,9 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Controls.Material
-import QtQuick.Layouts
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Controls.Material 2.15
+import QtQuick.Layouts 1.15
+
+import Qt.labs.calendar 1.0
 
 ColumnLayout {
     id: calendar
@@ -82,9 +84,11 @@ ColumnLayout {
         delegate: Text {
             text: narrowName
             color: Material.foreground
-            font.weight: 700
+            font.bold: true
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
+
+            width: gridMonth.width * 0.12
             height: width * 0.66
 
             Rectangle {
@@ -106,8 +110,8 @@ ColumnLayout {
         year: spinYear.value
         locale: Qt.locale("en_US")
         delegate: MCalendarDayDelegate {
-            Layout.fillHeight: true
-            Layout.fillWidth: true
+            //Layout.fillHeight: true
+            //Layout.fillWidth: true
             monthGrid: calendar
             onClicked: {
                 calendar.day = model.day;
